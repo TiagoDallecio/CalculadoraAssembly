@@ -19,7 +19,9 @@
         mov ax,@data
         mov ds,ax
 
-        
+        mov ah,02h
+        mov dl,10
+        int 21h
 
         lea dx,hello
         mov ah,09h
