@@ -25,7 +25,7 @@
 
         mov ah,06h
         xor al,al
-        xor cx,cx           ;SCROLL na tela e altera as cores do fundo e da fonte
+        xor cx,cx
         mov dx,184fh
         mov bh,0eh
         int 10h
@@ -55,7 +55,7 @@
 
         mov ah,06h
         mov al,1
-        xor cx,cx                ;Altera as cores do fundo e da fonte
+        xor cx,cx
         mov dx,184fh
         mov bh,03h
         int 10h
@@ -96,7 +96,6 @@
         
         mov cl,bl ;Salvando o valor armazenado em bl em cl para, futuramente, executar a operacao
         mov ch,bh ;O mesmo do de cima 
-
 
         
         cmp dh,'+' ;Comparando o valor retornado em al com o caracter '+'
@@ -144,10 +143,10 @@
 
         call pulalinha
 
-        mov ah,06h               
+        mov ah,06h               ;mudando a cor e dando scroll
         xor al,al               
         xor cx,cx              
-        mov dx,184fh             ;SCROLL na tela e altera as cores do fundo e da fonte
+        mov dx,184fh            
         mov bh,0dh              
         int 10h                 
 
@@ -161,6 +160,11 @@
     main endp;FIM DA MAIN
 
     somap proc ;Soma dois numeros (0 a 9)
+        ;o primeiro numero digitado chega em dois registradores, cl e bl
+        ;o segundo numero digitado chega em dois registradores, ch e bh
+        ;o codigo faz a soma dos dois valores e se a soma for menor que 10, 
+        ;o resultado estara presente no registrador ch
+        ;caso maior que 10, as dezenas estarão alocadas no registrador al e as unidades em bh
 
         call pulalinha
 
@@ -221,28 +225,52 @@
 
 
     subtracaop proc ;Subtrai dois numeros (0 a 9)
+        ;o primeiro numero digitado chega em dois registradores, cl e bl
+        ;o segundo numero digitado chega em dois registradores, ch e bh
+        ;o codigo faz a subtração do primeiro numero pelo o segundo,
+        ;armazenando o resultado no registrador bh
         call pulalinha
 
         mov ah,02h
-        mov dl,cl ;Impressao do caracter 
+        mov dl,10
         int 21h
-        mov ah,4ch ;Finalizacao do programa
+
+        mov dl,bl ;Impressao da operacao ('numero' 'sinal' 'numero' 'igual' 'resultado')
+        int 21h ;Primeiro numero
+        mov dl,'-'
+        int 21h ;Sinal de subtracao
+        mov dl,bh
+        int 21h ;Segundo numero
+        mov dl,'='
+        int 21h ;Sinal de igualdade
+
+        sub cl,ch ;Subtracao dos valores numericos guardados anteriormente
+        js negativo ;Caso o valor da subtracao seja negativo, pula para 'negativo'
+        or cl,30h ;Conversao do resultado da subtracao em um caracter para impressao
+        mov ah,02h
+        mov dl,cl ;Impressao do caracter 
         int 21h
         ret
         
         negativo: ;Caso o valor do resultado da subtracao seja negativo:
         and bl,0Fh ;Conversao dos valores de bl e bh em numeros
+        and bh,0Fh
+        sub bh,bl ;Subtracao do maior numero pelo menor 
+        or bh,30h ;Conversao do resultado da subtracao em numero 
+        mov ah,02h
+        mov dl,'-' ;Impressao do sinal de menos
         int 21h
         mov dl,bh ;Impressao do resultado da subtracao
         int 21h
-        mov ah,4ch ;Finalizacao do programa
         ret
-
     subtracaop endp ;Fim do procedimento de subtracao
 
     multiplicacaop proc ;Multiplica dois numeros (0 a 9)
-                        ;Deslocamento e soma
-
+        ;o primeiro numero digitado chega em dois registradores, cl e bl
+        ;o segundo numero digitado chega em dois registradores, ch e bh  
+        ;o codigo faz a multiplicação atraves de deslocamentos e somas
+        ;o resultado final esta em ax caso menor que 10, caso contrario
+        ;as dezenas estarão em dh, e as unidades em dl
         call pulalinha
 
         mov dl,bl ;Impressao da operacao ('numero' 'sinal' 'numero' 'igual' 'resultado')
@@ -261,169 +289,70 @@
     and bh,0fh
     mov dh,cl
 
+        mov bl,ch
+        xor ch,ch
+        xor dx,dx
+        
 
-    cmp ch,6
-    je caso6
-    cmp ch,7
-    je caso7            ;jump para casos especificos
-    cmp ch,8
-    je caso8
-    cmp ch,9
-    je caso9
+        xor ax,ax
+        mov dh,4
 
-
-
-
-    mov al,ch
-    xor ah,ah
-    mov bl,2            ;divide por 2, quociente igual a numero de rotaçoes e resto igual a numero de somas
-    div bl
-    mov bl,al
-    mov bh,ah
-    mov dh,cl
-  
-    rotacao:
-
-    shl cl,1            ;rotacionando 
-    dec bl
-    jnz rotacao
-    inc bh
-    sub cl,dh           ;evitando bug
-    somando:
+    volta5:    
+            shr bl, 1
+            jnc volta6
     
-    add cl,dh           ;somando
-    dec bh
-    jnz somando
+            add ax,cx
 
-    jmp resp
-
-
-
-
-    caso6:
-
-    mov bl,2            ;contador
-
-    rotacao1:           ;rotacao
-    shl cl,1
-    dec bl
-    jnz rotacao1
-
-    mov bh,2            ;contador
-
-    somando1:
-    add cl,dh           ;soma
-    dec bh
-    jnz somando1
+        volta6:
+            shl cx, 1
+            
+            dec dh
+            jnz volta5
 
 
-    jmp resp            ;imprime resp
-
-
-
-    caso7:
-
-    mov bl,2            ;contador
-
-    rotacao7:
-    shl cl,1            ;rotacao
-    dec bl
-    jnz rotacao7
-
-    mov bh,3            ;contador
+     
     
-    somando7:
-    
-    add cl,dh           ;soma
-    dec bh
-    jnz somando7
-
-
-    jmp resp            ;imprime resposta
-
-    
-    
-    caso8:
-
-    mov bl,2            ;contador
-
-    rotacao2:
-    shl cl,1            ;rotaçao
-    dec bl
-    jnz rotacao2
-    
-    mov bh,4            ;contador
-
-    somando2:
-    add cl,dh
-    dec bh              ;soma
-    jnz somando2
-
-
-    jmp resp            ;imprime resp
-
-
-    caso9:
-
-    mov bl,3            ;contador
-
-    rotacao3:
-    shl cl,1
-    dec bl              ;rotacao
-    jnz rotacao3
-
-    mov bh,1            ;contador
-    
-    somando3:
-    add cl,dh           ;soma
-    dec bh
-    jnz somando3
-
-
-    jmp resp            ;imprime resp
-
-    resp:
-    
-    cmp cl,10           ;compaa se maior q dez
+    cmp ax,10           ;compaa se maior q dez
     jae maiordez1 
 
-    or cl,30h
+    or ax,30h
     mov ah,02h
-    mov dl,cl           ;imprime numeros menores que 10
+    mov dx,ax         ;imprime numeros menores que 10
+    
     int 21h
     jmp fimmult
 
     maiordez1:             ;imprimido numeros maiores que 10
 
-    mov al,cl               ;passa o resultado para al
-    xor ah,ah               ;zera AH para deixar apenas o resultado em AX
+        mov bl,10
+        div bl
+        mov dl,al
+        mov dh,ah
 
-    mov bl,10               ;prepara divisão por 10
-    div bl
+        mov ah,02h
+        or dl,30h
+        int 21h
+        mov dl,dh
+        or dl,30h
+        int 21h
 
-    mov bl,al               ;passando resultado da divisão para outros registradores
-    mov bh,ah 
-                  
-    mov ah,02h
-    or bl,30h
-    mov dl,bl
-    int 21h                 ;prepara e imprime os numeros, o quociente sendo as dezenas e o resto sendo as unidades
-    mov ah,02h
-    or bh,30h
-    mov dl,bh
-    int 21h
-
-    fimmult:                
+    fimmult:
     call pulalinha
 
     ret
     multiplicacaop endp ;Fim do procedimento de multiplicacao
 
     divisaop proc ;Divide dois numeros (0 a 9)
-                  ;Deslocamento e subtracao
+        ;o primeiro numero digitado chega em dois registradores, cl e bl
+        ;o segundo numero digitado chega em dois registradores, ch e bh  
+        ;o codigo divide o primeiro numero pelo segundo, atraves de deslocamentos, somas e subtraçoes
+        ;o resto tambem é informado, e descoberto por meio de uma equação
 
+
+        and ch,0fh
         cmp ch,0
-        je caso0            ;chama exceção, divisão por zero
+        je caso0
+        or ch,30h
 
         call pulalinha
         
@@ -441,53 +370,32 @@
         and ch,0fh          ;conversao para executar operaçoes algebricas
         and bh,0fh
 
-        mov al,ch           ;salvando numeros para calculo do resto posteriormente
-        mov bh,cl
-
-        mov dh,5            ;contador
+        mov dh,5
         xor cl,cl
-        shl al,4
+        shl ch,4
     back:
-        shl cl,1            
-        sub bl,al                  ;subtrai os valores e analisa o resto    
-        js negativo2            
+        shl cl,1
+        sub bl,ch
+        
+        js negativo2
         or cl,1
+
         jmp positivo
     negativo2:
-        or cl,0                     ;restaura os valores a subtração e
-        add bl,al                   ;transforma o bit menos significativo em 0
-
+        
+        add bl,ch
     positivo:
-        shr al,1                    ;transforma o bit mais a direita em 1
+        shr ch,1
 
-        dec dh                      
-        cmp dh,0                    ;controla o sistema de loop
+        dec dh
+        cmp dh,0            ;controlando contador
         jnz back
 
         mov ah,02h
-        or cl,30h                    ;imprime resultado
+        or cl,30h           ;prepara e imprime o resultado
         mov dl,cl
         int 21h
 
-        call pulalinha
-
-        and cl,0fh
-        xor ax,ax                   ;executando equação para achar o resto
-        mov al,cl
-        mul ch
-        sub bh,al
-        
-        lea dx,resto
-        mov ah,09h      ;imprime string
-        int 21h
-        
-        mov ah,02h
-        or bh,30h                   ;imprime o resto
-        mov dl,bh
-        int 21h
-
-        call pulalinha
-        
         ret
     jmp fimdiv
 
@@ -501,6 +409,7 @@
 
     fimdiv:
 
+        call pulalinha
         call pulalinha
 
         ret
@@ -516,7 +425,5 @@
     ret
     
     pulalinha endp
-
-
 
  end main ;FIM
